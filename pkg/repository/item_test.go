@@ -114,3 +114,128 @@ func TestItem_CreateItem(t *testing.T) {
 		})
 	}
 }
+
+func TestItem_getAll(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	r := NewTodoItemRepository(db)
+
+	type args struct {
+		userId int
+		listId int
+	}
+
+	testTable := []struct {
+		name         string
+		mockBehavior func()
+		input        args
+		want         []todo.TodoItem
+		wantErr      bool
+	}{
+		{
+			name: "OK",
+			mockBehavior: func() {
+				rows := sqlmock.NewRows([]string{"id", "title", "description", "done"}).
+					AddRow(1, "title1", "description1", true).
+					AddRow(2, "title2", "description2", false).
+					AddRow(3, "title3", "description3", false)
+				mock.ExpectQuery("SELECT (.+) FROM todo_items ti INNER JOIN lists_items li ON (.+) INNER JOIN users_lists ul ON (.+) WHERE (.+) AND (.+)").
+					WillReturnRows(rows)
+			},
+			input: args{
+				userId: 1,
+				listId: 2,
+			},
+			want: []todo.TodoItem{
+				{1, "title1", "description1", true},
+				{2, "title2", "description2", false},
+				{3, "title3", "description3", false},
+			},
+		},
+		{
+			name: "No Records",
+			mockBehavior: func() {
+				rows := sqlmock.NewRows([]string{"id", "title", "description", "done"})
+
+				mock.ExpectQuery("SELECT (.+) FROM todo_items ti INNER JOIN lists_items li ON (.+) " +
+					"INNER JOIN users_lists ul ON (.+) WHERE (.+)").
+					WillReturnRows(rows)
+			},
+			input: args{
+				userId: 1,
+				listId: 2,
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.mockBehavior()
+
+			got, err := r.GetAll(testCase.input.userId, testCase.input.listId)
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, testCase.want, got)
+			}
+		})
+	}
+}
+
+func TestItem_getById(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+	if err != nil {
+		log.Fatalf("an error on testing TestItem_getById: %v", err)
+	}
+	defer db.Close()
+
+	r := NewTodoItemRepository(db)
+
+	type args struct {
+		userId int
+		itemId int
+	}
+
+	testTable := []struct {
+		name         string
+		mockBehavior func()
+		input        args
+		want         todo.TodoItem
+		wantErr      bool
+	}{
+		{
+			name: "OK",
+			mockBehavior: func() {
+				rows := sqlmock.NewRows([]string{"id", "title", "description", "done"}).
+					AddRow(1, "title1", "description1", true)
+
+				mock.ExpectQuery("SELECT (.+) FROM todo_items ti INNER JOIN lists_items li ON (.+) " +
+					"INNER JOIN users_lists ul ON (.+) WHERE (.+)").WillReturnRows(rows)
+			},
+			input: args{
+				userId: 1,
+				itemId: 5,
+			},
+			want: todo.TodoItem{1, "title1", "description1", true},
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.mockBehavior()
+
+			got, err := r.GetById(testCase.input.userId, testCase.input.itemId)
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, testCase.want, got)
+			}
+		})
+	}
+}
