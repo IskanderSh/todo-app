@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
 	"github.com/stretchr/testify/assert"
 	sqlmock "github.com/zhashkevych/go-sqlxmock"
@@ -258,6 +259,7 @@ func TestItem_Update(t *testing.T) {
 	if err != nil {
 		log.Fatalf("an error on testing TestItem_Update: %v", err)
 	}
+	defer db.Close()
 
 	r := NewTodoItemRepository(db)
 
@@ -351,4 +353,63 @@ func stringPointer(s string) *string {
 
 func boolPointer(b bool) *bool {
 	return &b
+}
+
+func TestItem_Delete(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+	if err != nil {
+		log.Fatalf("error on testing TestItem_Delete func: %v", err)
+	}
+	defer db.Close()
+
+	r := NewTodoItemRepository(db)
+
+	type args struct {
+		userId int
+		itemId int
+	}
+
+	testTable := []struct {
+		name         string
+		args         args
+		mockBehavior func()
+		wantErr      bool
+	}{
+		{
+			name: "OK",
+			args: args{
+				userId: 2,
+				itemId: 7,
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("DELETE FROM todo_items ti USING lists_items li, users_lists ul WHERE (.+)").
+					WithArgs(2, 7).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+		{
+			name: "Not Found",
+			args: args{
+				userId: 2,
+				itemId: 7,
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("DELETE FROM todo_items ti USING lists_items li, users_lists ul WHERE (.+)").
+					WithArgs(2, 7).WillReturnError(sql.ErrNoRows)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.mockBehavior()
+
+			err := r.Delete(testCase.args.userId, testCase.args.itemId)
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
