@@ -26,7 +26,7 @@ func TestHandler_signUp(t *testing.T) {
 	}{
 		{
 			name:      "OK",
-			inputBody: `{"name":"Test","username":"test","password":"qwerty"}`,
+			inputBody: `{"name": "Test", "username": "test", "password": "qwerty"}`,
 			inputUser: todo.User{
 				Name:     "Test",
 				Username: "test",
@@ -40,21 +40,21 @@ func TestHandler_signUp(t *testing.T) {
 		},
 		{
 			name:                "Empty Fields",
-			inputBody:           `{"username":"test","password":"qwerty"}`,
+			inputBody:           `{"username": "test", "password": "qwerty"}`,
 			mockBehavior:        func(s *mock_service.MockAuthorization, user todo.User) {},
 			expectedStatusCode:  400,
 			expectedRequestBody: `{"message":"invalid input body"}`,
 		},
 		{
 			name:      "Service Failure",
-			inputBody: `{"name":"Test","username":"test","password":"qwerty"}`,
+			inputBody: `{"name": "Test", "username": "test", "password": "qwerty"}`,
 			inputUser: todo.User{
 				Name:     "Test",
 				Username: "test",
 				Password: "qwerty",
 			},
 			mockBehavior: func(s *mock_service.MockAuthorization, user todo.User) {
-				s.EXPECT().CreateUser(user).Return(1, errors.New("service failure"))
+				s.EXPECT().CreateUser(user).Return(0, errors.New("service failure"))
 			},
 			expectedStatusCode:  500,
 			expectedRequestBody: `{"message":"service failure"}`,
@@ -85,8 +85,8 @@ func TestHandler_signUp(t *testing.T) {
 			r.ServeHTTP(w, req)
 
 			// Assert
-			assert.Equal(t, testCase.expectedStatusCode, w.Code)
-			assert.Equal(t, testCase.expectedRequestBody, w.Body.String())
+			assert.Equal(t, w.Code, testCase.expectedStatusCode)
+			assert.Equal(t, w.Body.String(), testCase.expectedRequestBody)
 		})
 	}
 }

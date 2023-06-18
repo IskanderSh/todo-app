@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
@@ -15,24 +16,58 @@ func TestHandler_userIdentity(t *testing.T) {
 	type mockBehavior func(s *mock_service.MockAuthorization, token string)
 
 	testTable := []struct {
-		name                 string
-		headerName           string
-		headerValue          string
-		token                string
-		mockBehavior         mockBehavior
-		expectedStatusCode   int
-		expectedResponseBody string
+		name                string
+		headerName          string
+		headerValue         string
+		token               string
+		mockBehavior        mockBehavior
+		expectedStatusCode  int
+		expectedRequestBody string
 	}{
 		{
 			name:        "OK",
-			headerValue: "Authorization",
-			headerName:  "Bearer token",
+			headerName:  "Authorization",
+			headerValue: "Bearer token",
 			token:       "token",
 			mockBehavior: func(s *mock_service.MockAuthorization, token string) {
 				s.EXPECT().ParseToken(token).Return(1, nil)
 			},
-			expectedStatusCode:   200,
-			expectedResponseBody: `1`,
+			expectedStatusCode:  200,
+			expectedRequestBody: `1`,
+		},
+		{
+			name:                "No Header",
+			headerName:          "",
+			mockBehavior:        func(s *mock_service.MockAuthorization, token string) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"empty auth header"}`,
+		},
+		{
+			name:                "Invalid Bearer",
+			headerName:          "Authorization",
+			headerValue:         "Bear token",
+			mockBehavior:        func(s *mock_service.MockAuthorization, token string) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"invalid auth header"}`,
+		},
+		{
+			name:                "Invalid Token",
+			headerName:          "Authorization",
+			headerValue:         "Bearer ",
+			mockBehavior:        func(s *mock_service.MockAuthorization, token string) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"token is empty"}`,
+		},
+		{
+			name:        "Service Failure",
+			headerName:  "Authorization",
+			headerValue: "Bearer token",
+			token:       "token",
+			mockBehavior: func(s *mock_service.MockAuthorization, token string) {
+				s.EXPECT().ParseToken(token).Return(1, errors.New("failed to parse token"))
+			},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"failed to parse token"}`,
 		},
 	}
 
@@ -57,15 +92,15 @@ func TestHandler_userIdentity(t *testing.T) {
 
 			// Test Request
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest("GET", "/protected", nil)
+			req := httptest.NewRequest("POST", "/protected", nil)
 			req.Header.Set(testCase.headerName, testCase.headerValue)
 
-			// Make Request
+			// Perform Request
 			r.ServeHTTP(w, req)
 
-			//Assert
+			// Assert
 			assert.Equal(t, w.Code, testCase.expectedStatusCode)
-			assert.Equal(t, w.Body, testCase.expectedResponseBody)
+			assert.Equal(t, w.Body.String(), testCase.expectedRequestBody)
 		})
 	}
 }

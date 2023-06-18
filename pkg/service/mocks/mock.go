@@ -6,7 +6,7 @@ package mock_service
 
 import (
 	reflect "reflect"
-	todo_app "todo-app"
+	todo "todo-app"
 
 	gomock "github.com/golang/mock/gomock"
 )
@@ -35,7 +35,7 @@ func (m *MockAuthorization) EXPECT() *MockAuthorizationMockRecorder {
 }
 
 // CreateUser mocks base method.
-func (m *MockAuthorization) CreateUser(user todo_app.User) (int, error) {
+func (m *MockAuthorization) CreateUser(user todo.User) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateUser", user)
 	ret0, _ := ret[0].(int)
@@ -103,7 +103,7 @@ func (m *MockTodoList) EXPECT() *MockTodoListMockRecorder {
 }
 
 // CreateList mocks base method.
-func (m *MockTodoList) CreateList(userId int, list todo_app.TodoList) (int, error) {
+func (m *MockTodoList) CreateList(userId int, list todo.TodoList) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateList", userId, list)
 	ret0, _ := ret[0].(int)
@@ -132,10 +132,10 @@ func (mr *MockTodoListMockRecorder) Delete(userId, listId interface{}) *gomock.C
 }
 
 // GetAll mocks base method.
-func (m *MockTodoList) GetAll(userId int) ([]todo_app.TodoList, error) {
+func (m *MockTodoList) GetAll(userId int) ([]todo.TodoList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAll", userId)
-	ret0, _ := ret[0].([]todo_app.TodoList)
+	ret0, _ := ret[0].([]todo.TodoList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -147,10 +147,10 @@ func (mr *MockTodoListMockRecorder) GetAll(userId interface{}) *gomock.Call {
 }
 
 // GetById mocks base method.
-func (m *MockTodoList) GetById(userId, listId int) (todo_app.TodoList, error) {
+func (m *MockTodoList) GetById(userId, listId int) (todo.TodoList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetById", userId, listId)
-	ret0, _ := ret[0].(todo_app.TodoList)
+	ret0, _ := ret[0].(todo.TodoList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -162,7 +162,7 @@ func (mr *MockTodoListMockRecorder) GetById(userId, listId interface{}) *gomock.
 }
 
 // Update mocks base method.
-func (m *MockTodoList) Update(userId, listId int, input todo_app.UpdateListInput) error {
+func (m *MockTodoList) Update(userId, listId int, input todo.UpdateListInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", userId, listId, input)
 	ret0, _ := ret[0].(error)
@@ -199,7 +199,7 @@ func (m *MockTodoItem) EXPECT() *MockTodoItemMockRecorder {
 }
 
 // CreateItem mocks base method.
-func (m *MockTodoItem) CreateItem(userId, listId int, item todo_app.TodoItem) (int, error) {
+func (m *MockTodoItem) CreateItem(userId, listId int, item todo.TodoItem) (int, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateItem", userId, listId, item)
 	ret0, _ := ret[0].(int)
@@ -228,10 +228,10 @@ func (mr *MockTodoItemMockRecorder) Delete(userId, itemId interface{}) *gomock.C
 }
 
 // GetAll mocks base method.
-func (m *MockTodoItem) GetAll(userId, listId int) ([]todo_app.TodoItem, error) {
+func (m *MockTodoItem) GetAll(userId, listId int) ([]todo.TodoItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAll", userId, listId)
-	ret0, _ := ret[0].([]todo_app.TodoItem)
+	ret0, _ := ret[0].([]todo.TodoItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -243,10 +243,10 @@ func (mr *MockTodoItemMockRecorder) GetAll(userId, listId interface{}) *gomock.C
 }
 
 // GetById mocks base method.
-func (m *MockTodoItem) GetById(userId, itemId int) (todo_app.TodoItem, error) {
+func (m *MockTodoItem) GetById(userId, itemId int) (todo.TodoItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetById", userId, itemId)
-	ret0, _ := ret[0].(todo_app.TodoItem)
+	ret0, _ := ret[0].(todo.TodoItem)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -258,7 +258,7 @@ func (mr *MockTodoItemMockRecorder) GetById(userId, itemId interface{}) *gomock.
 }
 
 // Update mocks base method.
-func (m *MockTodoItem) Update(userId, itemId int, input todo_app.UpdateItemInput) error {
+func (m *MockTodoItem) Update(userId, itemId int, input todo.UpdateItemInput) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", userId, itemId, input)
 	ret0, _ := ret[0].(error)

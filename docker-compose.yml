@@ -6,27 +6,19 @@ services:
     build: ./
     command: ./todo-app.exe
     ports:
-      - "8000:8000"
+      - 8000:8000
     depends_on:
       - db
     environment:
       - DB_PASSWORD=qwerty
-    links:
-      - db
 
   db:
+    container_name: db
     restart: always
-    container_name: postgres
     image: postgres:latest
     volumes:
       - ./.database/postgres/data:/var/lib/postgresql/data
     environment:
       - POSTGRES_PASSWORD=qwerty
     ports:
-      - "5436:5432"
-#    healthcheck:
-#      test: [ "CMD", "curl", "-f", "http://localhost:5436" ]
-#      interval: 15s
-#      timeout: 10s
-#      start_period: 1s
-#      retries: 5
+      - 5436:5432
