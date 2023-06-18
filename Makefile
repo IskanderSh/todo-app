@@ -2,7 +2,7 @@ build:
 	docker-compose build todo-app
 
 run:
-	docker-compose up todo-app
+	go run cmd/main.go
 
 test:
 	go test -v ./...
