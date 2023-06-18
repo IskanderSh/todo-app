@@ -162,8 +162,7 @@ func TestItem_getAll(t *testing.T) {
 				rows := sqlmock.NewRows([]string{"id", "title", "description", "done"})
 
 				mock.ExpectQuery("SELECT (.+) FROM todo_items ti INNER JOIN lists_items li ON (.+) " +
-					"INNER JOIN users_lists ul ON (.+) WHERE (.+)").
-					WillReturnRows(rows)
+					"INNER JOIN users_lists ul ON (.+) WHERE (.+)").WillReturnRows(rows)
 			},
 			input: args{
 				userId: 1,
@@ -222,6 +221,20 @@ func TestItem_getById(t *testing.T) {
 				itemId: 5,
 			},
 			want: todo.TodoItem{1, "title1", "description1", true},
+		},
+		{
+			name: "Not Found",
+			mockBehavior: func() {
+				rows := sqlmock.NewRows([]string{"id", "title", "description", "done"})
+
+				mock.ExpectQuery("SELECT (.+) FROM todo_items ti INNER JOIN lists_items li ON (.+) " +
+					"INNER JOIN users_lists ul ON (.+) WHERE (.+)").WillReturnRows(rows)
+			},
+			input: args{
+				userId: 1,
+				itemId: 5,
+			},
+			wantErr: true,
 		},
 	}
 
