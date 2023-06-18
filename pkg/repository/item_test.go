@@ -115,7 +115,7 @@ func TestItem_CreateItem(t *testing.T) {
 	}
 }
 
-func TestItem_getAll(t *testing.T) {
+func TestItem_GetAll(t *testing.T) {
 	db, mock, err := sqlmock.Newx()
 	if err != nil {
 		log.Fatal(err)
@@ -186,7 +186,7 @@ func TestItem_getAll(t *testing.T) {
 	}
 }
 
-func TestItem_getById(t *testing.T) {
+func TestItem_GetById(t *testing.T) {
 	db, mock, err := sqlmock.Newx()
 	if err != nil {
 		log.Fatalf("an error on testing TestItem_getById: %v", err)
@@ -251,4 +251,104 @@ func TestItem_getById(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestItem_Update(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+	if err != nil {
+		log.Fatalf("an error on testing TestItem_Update: %v", err)
+	}
+
+	r := NewTodoItemRepository(db)
+
+	type args struct {
+		userId int
+		itemId int
+		input  todo.UpdateItemInput
+	}
+
+	testTable := []struct {
+		name         string
+		mockBehavior func()
+		args         args
+		wantErr      bool
+	}{
+		{
+			name: "OK",
+			args: args{
+				userId: 1,
+				itemId: 2,
+				input: todo.UpdateItemInput{
+					Title:       stringPointer("new title"),
+					Description: stringPointer("new description"),
+					Done:        boolPointer(true),
+				},
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("UPDATE todo_items ti SET (.+) FROM lists_items li, users_lists ul WHERE (.+)").
+					WithArgs("new title", "new description", true, 1, 2).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+		{
+			name: "Without Done",
+			args: args{
+				userId: 1,
+				itemId: 2,
+				input: todo.UpdateItemInput{
+					Title:       stringPointer("new title"),
+					Description: stringPointer("new description"),
+				},
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("UPDATE todo_items ti SET (.+) FROM lists_items li, users_lists ul WHERE (.+)").
+					WithArgs("new title", "new description", 1, 2).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+		{
+			name: "Without Done And Description",
+			args: args{
+				userId: 1,
+				itemId: 2,
+				input: todo.UpdateItemInput{
+					Title: stringPointer("new title"),
+				},
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("UPDATE todo_items ti SET (.+) FROM lists_items li, users_lists ul WHERE (.+)").
+					WithArgs("new title", 1, 2).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+		{
+			name: "No Input Fields",
+			args: args{
+				userId: 1,
+				itemId: 2,
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("UPDATE todo_items ti SET FROM lists_items li, users_lists ul WHERE (.+)").
+					WithArgs(1, 2).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.mockBehavior()
+
+			err := r.Update(testCase.args.userId, testCase.args.itemId, testCase.args.input)
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func stringPointer(s string) *string {
+	return &s
+}
+
+func boolPointer(b bool) *bool {
+	return &b
 }
