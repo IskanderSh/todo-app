@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +43,44 @@ func TestList_CreateList(t *testing.T) {
 			expectedStatusCode:  200,
 			expectedRequestBody: `{"id":1}`,
 		},
+		{
+			name:                "Empty Fields",
+			headerName:          "userId",
+			headerValue:         "2",
+			userId:              2,
+			inputBody:           `{"title": "", "description": "test description"}`,
+			mockBehavior:        func(s *mock_service.MockTodoList, userId int, list todo.TodoList) {},
+			expectedStatusCode:  400,
+			expectedRequestBody: `{"message":"invalid input body"}`,
+		},
+		{
+			name:        "Service Failure",
+			headerName:  "userId",
+			headerValue: "2",
+			userId:      2,
+			inputBody:   `{"title": "test title", "description": "test description"}`,
+			list: todo.TodoList{
+				Title:       "test title",
+				Description: "test description",
+			},
+			mockBehavior: func(s *mock_service.MockTodoList, userId int, list todo.TodoList) {
+				s.EXPECT().CreateList(userId, list).Return(0, errors.New("service failure"))
+			},
+			expectedStatusCode:  500,
+			expectedRequestBody: `{"message":"service failure"}`,
+		},
+		{
+			name:      "No Header",
+			userId:    2,
+			inputBody: `{"title": "test title", "description": "test description"}`,
+			list: todo.TodoList{
+				Title:       "test title",
+				Description: "test description",
+			},
+			mockBehavior:        func(s *mock_service.MockTodoList, userId int, list todo.TodoList) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"unauthorized user"}`,
+		},
 	}
 
 	for _, testCase := range testTable {
@@ -64,10 +103,6 @@ func TestList_CreateList(t *testing.T) {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/api/lists", bytes.NewBufferString(testCase.inputBody))
 			req.Header.Set(testCase.headerName, testCase.headerValue)
-
-			//ctx := req.Context()
-			//ctx = context.WithValue(ctx, testCase.headerName, testCase.headerValue)
-			//req = req.WithContext(ctx)
 
 			// Perform Request
 			r.ServeHTTP(w, req)
