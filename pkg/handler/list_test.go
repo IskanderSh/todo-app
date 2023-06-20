@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -200,7 +201,83 @@ func TestList_GetAllLists(t *testing.T) {
 }
 
 func TestList_GetListById(t *testing.T) {
+	type mockBehavior func(s *mock_service.MockTodoList, userId, listId int, output todo.TodoList)
 
+	testTable := []struct {
+		name                string
+		headerValue         string
+		userId              int
+		listId              int
+		output              todo.TodoList
+		mockBehavior        mockBehavior
+		expectedStatusCode  int
+		expectedRequestBody string
+	}{
+		{
+			name:        "OK",
+			headerValue: "3",
+			userId:      3,
+			listId:      2,
+			output: todo.TodoList{
+				Id:          2,
+				Title:       "test title",
+				Description: "test description",
+			},
+			mockBehavior: func(s *mock_service.MockTodoList, userId, listId int, output todo.TodoList) {
+				s.EXPECT().GetById(userId, listId).Return(output, nil)
+			},
+			expectedStatusCode:  200,
+			expectedRequestBody: `{"id":2,"title":"test title","description":"test description"}`,
+		},
+		{
+			name:                "No Header",
+			mockBehavior:        func(s *mock_service.MockTodoList, userId, listId int, output todo.TodoList) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"user unauthorized"}`,
+		},
+		{
+			name:        "Service Failure",
+			headerValue: "3",
+			userId:      3,
+			listId:      2,
+			output:      todo.TodoList{},
+			mockBehavior: func(s *mock_service.MockTodoList, userId, listId int, output todo.TodoList) {
+				s.EXPECT().GetById(userId, listId).Return(output, errors.New("service failure"))
+			},
+			expectedStatusCode:  500,
+			expectedRequestBody: `{"message":"service failure"}`,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Init Deps
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			todoList := mock_service.NewMockTodoList(c)
+			testCase.mockBehavior(todoList, testCase.userId, testCase.listId, testCase.output)
+
+			services := &service.Service{TodoList: todoList}
+			handler := NewHandler(services)
+
+			// Test Server
+			r := gin.New()
+			r.GET("/api/lists/:id", handler.getListById)
+
+			// Test Request
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", fmt.Sprintf("/api/lists/%d", testCase.listId), nil)
+			req.AddCookie(&http.Cookie{Name: userCtx, Value: testCase.headerValue})
+
+			// Perform Request
+			r.ServeHTTP(w, req)
+
+			// Assert
+			assert.Equal(t, testCase.expectedStatusCode, w.Code)
+			assert.Equal(t, testCase.expectedRequestBody, w.Body.String())
+		})
+	}
 }
 
 func TestList_UpdateList(t *testing.T) {
