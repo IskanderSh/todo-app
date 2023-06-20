@@ -281,7 +281,108 @@ func TestList_GetListById(t *testing.T) {
 }
 
 func TestList_UpdateList(t *testing.T) {
+	type mockBehavior func(s *mock_service.MockTodoList, userId, listId int, input todo.UpdateListInput)
 
+	testTable := []struct {
+		name                string
+		headerValue         string
+		userId              int
+		listId              int
+		input               todo.UpdateListInput
+		inputString         string
+		mockBehavior        mockBehavior
+		expectedStatusCode  int
+		expectedRequestBody string
+	}{
+		{
+			name:        "OK No Empty Fields",
+			headerValue: "7",
+			userId:      7,
+			listId:      2,
+			input: todo.UpdateListInput{
+				Title:       stringPointer("new title"),
+				Description: stringPointer("new description"),
+			},
+			inputString: `{"title":"new title","description":"new description"}`,
+			mockBehavior: func(s *mock_service.MockTodoList, userId, listId int, input todo.UpdateListInput) {
+				s.EXPECT().Update(userId, listId, input).Return(nil)
+			},
+			expectedStatusCode:  200,
+			expectedRequestBody: `{"status":"ok"}`,
+		},
+		{
+			name:                "No Header",
+			mockBehavior:        func(s *mock_service.MockTodoList, userId, listId int, input todo.UpdateListInput) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"user unauthorized"}`,
+		},
+		{
+			name:        "OK One Field Empty",
+			headerValue: "7",
+			userId:      7,
+			listId:      2,
+			input: todo.UpdateListInput{
+				Title:       stringPointer(""),
+				Description: stringPointer("new description"),
+			},
+			inputString: `{"title":"","description":"new description"}`,
+			mockBehavior: func(s *mock_service.MockTodoList, userId, listId int, input todo.UpdateListInput) {
+				s.EXPECT().Update(userId, listId, input).Return(nil)
+			},
+			expectedStatusCode:  200,
+			expectedRequestBody: `{"status":"ok"}`,
+		},
+		{
+			name:        "OK All Empty",
+			headerValue: "7",
+			userId:      7,
+			listId:      2,
+			input: todo.UpdateListInput{
+				Title:       stringPointer(""),
+				Description: stringPointer(""),
+			},
+			inputString: `{"title":"","description":""}`,
+			mockBehavior: func(s *mock_service.MockTodoList, userId, listId int, input todo.UpdateListInput) {
+				s.EXPECT().Update(userId, listId, input).Return(nil)
+			},
+			expectedStatusCode:  200,
+			expectedRequestBody: `{"status":"ok"}`,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Init Deps
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			todoList := mock_service.NewMockTodoList(c)
+			testCase.mockBehavior(todoList, testCase.userId, testCase.listId, testCase.input)
+
+			services := &service.Service{TodoList: todoList}
+			handler := NewHandler(services)
+
+			// Test Server
+			r := gin.New()
+			r.PUT("/api/lists/:id", handler.updateList)
+
+			// Test Request
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("PUT", fmt.Sprintf("/api/lists/%d", testCase.listId), bytes.NewBufferString(testCase.inputString))
+			req.AddCookie(&http.Cookie{Name: userCtx, Value: testCase.headerValue})
+
+			// Perform Request
+			r.ServeHTTP(w, req)
+
+			// Assert
+			assert.Equal(t, testCase.expectedStatusCode, w.Code)
+			assert.Equal(t, testCase.expectedRequestBody, w.Body.String())
+		})
+	}
+}
+
+func stringPointer(s string) *string {
+	return &s
 }
 
 func TestList_DeleteList(t *testing.T) {
