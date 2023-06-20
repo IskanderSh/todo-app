@@ -285,5 +285,74 @@ func TestList_UpdateList(t *testing.T) {
 }
 
 func TestList_DeleteList(t *testing.T) {
+	type mockBehavior func(s *mock_service.MockTodoList, userId, listId int)
 
+	testTable := []struct {
+		name                string
+		headerValue         string
+		userId              int
+		listId              int
+		mockBehavior        mockBehavior
+		expectedStatusCode  int
+		expectedRequestBody string
+	}{
+		{
+			name:        "OK",
+			headerValue: "2",
+			userId:      2,
+			listId:      4,
+			mockBehavior: func(s *mock_service.MockTodoList, userId, listId int) {
+				s.EXPECT().Delete(userId, listId).Return(nil)
+			},
+			expectedStatusCode:  200,
+			expectedRequestBody: `{"status":"ok"}`,
+		},
+		{
+			name:                "No Header",
+			mockBehavior:        func(s *mock_service.MockTodoList, userId, listId int) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"user unauthorized"}`,
+		},
+		{
+			name:        "Service Failure",
+			headerValue: "2",
+			userId:      2,
+			listId:      4,
+			mockBehavior: func(s *mock_service.MockTodoList, userId, listId int) {
+				s.EXPECT().Delete(userId, listId).Return(errors.New("service failure"))
+			},
+			expectedStatusCode:  500,
+			expectedRequestBody: `{"message":"service failure"}`,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Init Deps
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			todoList := mock_service.NewMockTodoList(c)
+			testCase.mockBehavior(todoList, testCase.userId, testCase.listId)
+
+			services := &service.Service{TodoList: todoList}
+			handler := NewHandler(services)
+
+			// Test Server
+			r := gin.New()
+			r.DELETE("/api/lists/:id", handler.deleteList)
+
+			// Test Request
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("DELETE", fmt.Sprintf("/api/lists/%d", testCase.listId), nil)
+			req.AddCookie(&http.Cookie{Name: userCtx, Value: testCase.headerValue})
+
+			// Perform Request
+			r.ServeHTTP(w, req)
+
+			// Assert
+			assert.Equal(t, testCase.expectedStatusCode, w.Code)
+			assert.Equal(t, testCase.expectedRequestBody, w.Body.String())
+		})
+	}
 }

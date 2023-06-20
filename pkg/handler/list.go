@@ -113,7 +113,7 @@ func (h *Handler) deleteList(c *gin.Context) {
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		newErrorResponse(c, http.StatusInternalServerError, "invalid id param")
+		newErrorResponse(c, http.StatusBadRequest, "invalid id param")
 		return
 	}
 
