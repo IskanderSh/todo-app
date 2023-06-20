@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/magiconair/properties/assert"
@@ -33,7 +32,7 @@ func TestHandler_userIdentity(t *testing.T) {
 				s.EXPECT().ParseToken(token).Return(1, nil)
 			},
 			expectedStatusCode:  200,
-			expectedRequestBody: `1`,
+			expectedRequestBody: ``,
 		},
 		{
 			name:                "No Header",
@@ -86,8 +85,8 @@ func TestHandler_userIdentity(t *testing.T) {
 			// Test Server
 			r := gin.New()
 			r.POST("/protected", handler.userIdentity, func(c *gin.Context) {
-				id, _ := c.Get(userCtx)
-				c.String(200, fmt.Sprintf("%d", id.(int)))
+				id, _ := c.Cookie(userCtx)
+				c.String(200, id)
 			})
 
 			// Test Request

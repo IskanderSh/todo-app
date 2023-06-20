@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
@@ -37,21 +38,16 @@ func (h *Handler) userIdentity(c *gin.Context) {
 		return
 	}
 
-	c.Set(userCtx, userId)
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(userCtx, fmt.Sprintf("%d", userId), 3600*12, "", "", false, true)
 }
 
 func getUserId(c *gin.Context) (int, error) {
-	//id, ok := c.Get(userCtx)
-	//if !ok {
-	//	return 0, errors.New("user id not found")
-	//}
-	//
-	//idInt, ok := id.(int)
-	//if !ok {
-	//	return 0, errors.New("user id is of invalid type")
-	//}
+	id, err := c.Cookie(userCtx)
+	if err != nil {
+		return 0, errors.New("user id not found")
+	}
 
-	id := c.GetHeader(userCtx)
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
 		return 0, errors.New("user id not found")

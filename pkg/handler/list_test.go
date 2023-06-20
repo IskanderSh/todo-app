@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	todo "todo-app"
@@ -71,7 +72,6 @@ func TestList_CreateList(t *testing.T) {
 		},
 		{
 			name:      "No Header",
-			userId:    2,
 			inputBody: `{"title": "test title", "description": "test description"}`,
 			list: todo.TodoList{
 				Title:       "test title",
@@ -102,7 +102,7 @@ func TestList_CreateList(t *testing.T) {
 			// Test Request
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/api/lists", bytes.NewBufferString(testCase.inputBody))
-			req.Header.Set(testCase.headerName, testCase.headerValue)
+			req.AddCookie(&http.Cookie{Name: testCase.headerName, Value: testCase.headerValue})
 
 			// Perform Request
 			r.ServeHTTP(w, req)
@@ -114,9 +114,35 @@ func TestList_CreateList(t *testing.T) {
 	}
 }
 
-func TestList_GetAllLists(t *testing.T) {
-
-}
+//func TestList_GetAllLists(t *testing.T) {
+//	type mockBehavior func(s *mock_service.MockTodoList, userId int)
+//
+//	testTable := []struct {
+//		name                string
+//		headerName          string
+//		headerValue         string
+//		userId              int
+//		mockBehavior        mockBehavior
+//		expectedStatusCode  int
+//		expectedRequestBody string
+//	}{
+//		{
+//			name:        "OK",
+//			headerName:  "userId",
+//			headerValue: "4",
+//			userId:      4,
+//			mockBehavior: func(s *mock_service.MockTodoList, userId int) {
+//				rows := sqlmock.NewRows([]string{"id", "title", "description"}).
+//					AddRow(1, "title1", "description1").
+//					AddRow(2, "title2", "description2").
+//					AddRow(3, "title3", "description3")
+//				s.EXPECT().GetAll(userId).Return(rows, nil)
+//			},
+//			expectedStatusCode:  200,
+//			expectedRequestBody: `{"data":[{}]}`,
+//		},
+//	}
+//}
 
 func TestList_GetListById(t *testing.T) {
 
