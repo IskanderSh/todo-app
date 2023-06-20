@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -40,14 +41,20 @@ func (h *Handler) userIdentity(c *gin.Context) {
 }
 
 func getUserId(c *gin.Context) (int, error) {
-	id, ok := c.Get(userCtx)
-	if !ok {
-		return 0, errors.New("user id not found")
-	}
+	//id, ok := c.Get(userCtx)
+	//if !ok {
+	//	return 0, errors.New("user id not found")
+	//}
+	//
+	//idInt, ok := id.(int)
+	//if !ok {
+	//	return 0, errors.New("user id is of invalid type")
+	//}
 
-	idInt, ok := id.(int)
-	if !ok {
-		return 0, errors.New("user id is of invalid type")
+	id := c.GetHeader(userCtx)
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		return 0, errors.New("user id not found")
 	}
 
 	return idInt, nil

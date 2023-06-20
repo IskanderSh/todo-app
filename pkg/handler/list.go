@@ -12,6 +12,7 @@ func (h *Handler) createList(c *gin.Context) {
 	if err != nil {
 		return
 	}
+	//userId := 2
 
 	var input todo.TodoList
 	if err := c.BindJSON(&input); err != nil {

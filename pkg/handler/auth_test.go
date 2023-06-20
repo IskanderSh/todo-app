@@ -75,11 +75,11 @@ func TestHandler_signUp(t *testing.T) {
 
 			// Test Server
 			r := gin.New()
-			r.POST("/sign-up", handler.signUp)
+			r.POST("/auth/sign-up", handler.signUp)
 
 			// Test Request
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest("POST", "/sign-up", bytes.NewBufferString(testCase.inputBody))
+			req := httptest.NewRequest("POST", "/auth/sign-up", bytes.NewBufferString(testCase.inputBody))
 
 			// Perform Request
 			r.ServeHTTP(w, req)
