@@ -19,7 +19,6 @@ func TestList_CreateList(t *testing.T) {
 
 	testTable := []struct {
 		name                string
-		headerName          string
 		headerValue         string
 		inputBody           string
 		userId              int
@@ -30,7 +29,6 @@ func TestList_CreateList(t *testing.T) {
 	}{
 		{
 			name:        "OK",
-			headerName:  "userId",
 			headerValue: "2",
 			userId:      2,
 			inputBody:   `{"title": "test title", "description": "test description"}`,
@@ -46,7 +44,6 @@ func TestList_CreateList(t *testing.T) {
 		},
 		{
 			name:                "Empty Fields",
-			headerName:          "userId",
 			headerValue:         "2",
 			userId:              2,
 			inputBody:           `{"title": "", "description": "test description"}`,
@@ -55,8 +52,18 @@ func TestList_CreateList(t *testing.T) {
 			expectedRequestBody: `{"message":"invalid input body"}`,
 		},
 		{
+			name:      "No Header",
+			inputBody: `{"title": "test title", "description": "test description"}`,
+			list: todo.TodoList{
+				Title:       "test title",
+				Description: "test description",
+			},
+			mockBehavior:        func(s *mock_service.MockTodoList, userId int, list todo.TodoList) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"unauthorized user"}`,
+		},
+		{
 			name:        "Service Failure",
-			headerName:  "userId",
 			headerValue: "2",
 			userId:      2,
 			inputBody:   `{"title": "test title", "description": "test description"}`,
@@ -69,17 +76,6 @@ func TestList_CreateList(t *testing.T) {
 			},
 			expectedStatusCode:  500,
 			expectedRequestBody: `{"message":"service failure"}`,
-		},
-		{
-			name:      "No Header",
-			inputBody: `{"title": "test title", "description": "test description"}`,
-			list: todo.TodoList{
-				Title:       "test title",
-				Description: "test description",
-			},
-			mockBehavior:        func(s *mock_service.MockTodoList, userId int, list todo.TodoList) {},
-			expectedStatusCode:  401,
-			expectedRequestBody: `{"message":"unauthorized user"}`,
 		},
 	}
 
@@ -102,7 +98,7 @@ func TestList_CreateList(t *testing.T) {
 			// Test Request
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest("POST", "/api/lists", bytes.NewBufferString(testCase.inputBody))
-			req.AddCookie(&http.Cookie{Name: testCase.headerName, Value: testCase.headerValue})
+			req.AddCookie(&http.Cookie{Name: userCtx, Value: testCase.headerValue})
 
 			// Perform Request
 			r.ServeHTTP(w, req)
@@ -114,35 +110,94 @@ func TestList_CreateList(t *testing.T) {
 	}
 }
 
-//func TestList_GetAllLists(t *testing.T) {
-//	type mockBehavior func(s *mock_service.MockTodoList, userId int)
-//
-//	testTable := []struct {
-//		name                string
-//		headerName          string
-//		headerValue         string
-//		userId              int
-//		mockBehavior        mockBehavior
-//		expectedStatusCode  int
-//		expectedRequestBody string
-//	}{
-//		{
-//			name:        "OK",
-//			headerName:  "userId",
-//			headerValue: "4",
-//			userId:      4,
-//			mockBehavior: func(s *mock_service.MockTodoList, userId int) {
-//				rows := sqlmock.NewRows([]string{"id", "title", "description"}).
-//					AddRow(1, "title1", "description1").
-//					AddRow(2, "title2", "description2").
-//					AddRow(3, "title3", "description3")
-//				s.EXPECT().GetAll(userId).Return(rows, nil)
-//			},
-//			expectedStatusCode:  200,
-//			expectedRequestBody: `{"data":[{}]}`,
-//		},
-//	}
-//}
+func TestList_GetAllLists(t *testing.T) {
+	type mockBehavior func(s *mock_service.MockTodoList, userId int, output []todo.TodoList)
+
+	testTable := []struct {
+		name                string
+		headerValue         string
+		userId              int
+		output              []todo.TodoList
+		mockBehavior        mockBehavior
+		expectedStatusCode  int
+		expectedRequestBody string
+	}{
+		{
+			name:        "OK",
+			headerValue: "4",
+			userId:      4,
+			output: []todo.TodoList{
+				{
+					Id:          1,
+					Title:       "title1",
+					Description: "description1",
+				},
+				{
+					Id:          2,
+					Title:       "title2",
+					Description: "description2",
+				},
+				{
+					Id:          3,
+					Title:       "title3",
+					Description: "description3",
+				},
+			},
+			mockBehavior: func(s *mock_service.MockTodoList, userId int, output []todo.TodoList) {
+				s.EXPECT().GetAll(userId).Return(output, nil)
+			},
+			expectedStatusCode:  200,
+			expectedRequestBody: `{"data":[{"id":1,"title":"title1","description":"description1"},{"id":2,"title":"title2","description":"description2"},{"id":3,"title":"title3","description":"description3"}]}`,
+		},
+		{
+			name:                "No Header",
+			mockBehavior:        func(s *mock_service.MockTodoList, userId int, output []todo.TodoList) {},
+			expectedStatusCode:  401,
+			expectedRequestBody: `{"message":"user unauthorized"}`,
+		},
+		{
+			name:        "Service Failure",
+			headerValue: "4",
+			userId:      4,
+			output:      []todo.TodoList{},
+			mockBehavior: func(s *mock_service.MockTodoList, userId int, output []todo.TodoList) {
+				s.EXPECT().GetAll(userId).Return(output, errors.New("service failure"))
+			},
+			expectedStatusCode:  500,
+			expectedRequestBody: `{"message":"service failure"}`,
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Init Deps
+			c := gomock.NewController(t)
+			defer c.Finish()
+
+			todoList := mock_service.NewMockTodoList(c)
+			testCase.mockBehavior(todoList, testCase.userId, testCase.output)
+
+			services := &service.Service{TodoList: todoList}
+			handler := NewHandler(services)
+
+			// Test Server
+			r := gin.New()
+			r.GET("/api/lists", handler.getAllLists)
+
+			// Test Request
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", "/api/lists", nil)
+			req.AddCookie(&http.Cookie{Name: userCtx, Value: testCase.headerValue})
+
+			// Perform Request
+			r.ServeHTTP(w, req)
+
+			// Assert
+			assert.Equal(t, testCase.expectedStatusCode, w.Code)
+			assert.Equal(t, testCase.expectedRequestBody, w.Body.String())
+		})
+	}
+}
 
 func TestList_GetListById(t *testing.T) {
 

@@ -38,6 +38,7 @@ type GetAllListsResponse struct {
 func (h *Handler) getAllLists(c *gin.Context) {
 	userId, err := getUserId(c)
 	if err != nil {
+		newErrorResponse(c, http.StatusUnauthorized, "user unauthorized")
 		return
 	}
 
