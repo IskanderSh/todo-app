@@ -40,7 +40,7 @@ func (h *Handler) createItem(c *gin.Context) {
 func (h *Handler) getAllItems(c *gin.Context) {
 	userId, err := getUserId(c)
 	if err != nil {
-		newErrorResponse(c, http.StatusUnauthorized, err.Error())
+		newErrorResponse(c, http.StatusUnauthorized, "unauthorized user")
 		return
 	}
 
