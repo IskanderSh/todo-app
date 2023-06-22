@@ -10,7 +10,7 @@ import (
 func (h *Handler) createItem(c *gin.Context) {
 	userId, err := getUserId(c)
 	if err != nil {
-		newErrorResponse(c, http.StatusUnauthorized, err.Error())
+		newErrorResponse(c, http.StatusUnauthorized, "unauthorized user")
 		return
 	}
 
@@ -22,7 +22,7 @@ func (h *Handler) createItem(c *gin.Context) {
 
 	var input todo.TodoItem
 	if err := c.BindJSON(&input); err != nil {
-		newErrorResponse(c, http.StatusBadRequest, err.Error())
+		newErrorResponse(c, http.StatusBadRequest, "invalid input body")
 		return
 	}
 
