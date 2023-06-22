@@ -152,6 +152,15 @@ func TestList_GetAll(t *testing.T) {
 				{3, "title3", "description3"},
 			},
 		},
+		{
+			name:   "No Records",
+			userId: 3,
+			mockBehavior: func() {
+				rows := sqlmock.NewRows([]string{"id", "title", "description"})
+				mock.ExpectQuery("SELECT (.+) FROM todo_lists tl INNER JOIN users_lists ul ON (.+)").
+					WillReturnRows(rows)
+			},
+		},
 	}
 
 	for _, testCase := range testTable {
@@ -174,7 +183,79 @@ func TestList_GetById(t *testing.T) {
 }
 
 func TestList_Update(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+	if err != nil {
+		log.Fatalf("error on TestList_Update: %v", err)
+	}
+	defer db.Close()
 
+	r := NewTodoListPostgres(db)
+
+	type args struct {
+		userId, listId int
+		input          todo.UpdateListInput
+	}
+
+	testTable := []struct {
+		name         string
+		args         args
+		mockBehavior func()
+		wantErr      bool
+	}{
+		{
+			name: "OK",
+			args: args{
+				userId: 1,
+				listId: 2,
+				input: todo.UpdateListInput{
+					Title:       stringPointer("new title"),
+					Description: stringPointer("new description"),
+				},
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("UPDATE todo_lists tl SET (.+) FROM users_lists ul WHERE (.+)").
+					WithArgs("new title", "new description", 2, 1).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+		{
+			name: "OK Without Title",
+			args: args{
+				userId: 1,
+				listId: 2,
+				input: todo.UpdateListInput{
+					Description: stringPointer("new description"),
+				},
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("UPDATE todo_lists tl SET (.+) FROM users_lists ul WHERE (.+)").
+					WithArgs("new description", 2, 1).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+		{
+			name: "OK No Input Fields",
+			args: args{
+				userId: 1,
+				listId: 2,
+			},
+			mockBehavior: func() {
+				mock.ExpectExec("UPDATE todo_lists tl SET FROM users_lists ul WHERE (.+)").
+					WithArgs(2, 1).WillReturnResult(sqlmock.NewResult(0, 1))
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.mockBehavior()
+
+			err := r.Update(testCase.args.userId, testCase.args.listId, testCase.args.input)
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
 
 func TestList_Delete(t *testing.T) {

@@ -321,7 +321,7 @@ func TestItem_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "No Input Fields",
+			name: "OK No Input Fields",
 			args: args{
 				userId: 1,
 				itemId: 2,
