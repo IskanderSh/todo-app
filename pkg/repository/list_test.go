@@ -120,7 +120,53 @@ func TestList_CreateList(t *testing.T) {
 }
 
 func TestList_GetAll(t *testing.T) {
+	db, mock, err := sqlmock.Newx()
+	if err != nil {
+		log.Fatalf("error on TestList_GetAll func: %v", err)
+	}
+	defer db.Close()
 
+	r := NewTodoListPostgres(db)
+
+	testTable := []struct {
+		name         string
+		userId       int
+		mockBehavior func()
+		want         []todo.TodoList
+		wantErr      bool
+	}{
+		{
+			name:   "OK",
+			userId: 3,
+			mockBehavior: func() {
+				rows := sqlmock.NewRows([]string{"id", "title", "description"}).
+					AddRow(1, "title1", "description1").
+					AddRow(2, "title2", "description2").
+					AddRow(3, "title3", "description3")
+				mock.ExpectQuery("SELECT (.+) FROM todo_lists tl INNER JOIN users_lists ul ON (.+)").
+					WillReturnRows(rows)
+			},
+			want: []todo.TodoList{
+				{1, "title1", "description1"},
+				{2, "title2", "description2"},
+				{3, "title3", "description3"},
+			},
+		},
+	}
+
+	for _, testCase := range testTable {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.mockBehavior()
+
+			got, err := r.GetAll(testCase.userId)
+			if testCase.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, testCase.want, got)
+			}
+		})
+	}
 }
 
 func TestList_GetById(t *testing.T) {
